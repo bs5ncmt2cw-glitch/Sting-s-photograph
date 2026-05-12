@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Travel Photo Spots</title>
+    <meta
+      name="description"
+      content="Discover the best travel photo spots, open each viewpoint in Google Maps, and browse real sample photos."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <button class="brand-button" type="button" data-action="go-home">
+            <span class="brand-mark">TP</span>
+            <span>
+              <strong>Travel Photo Spots</strong>
+              <small>Best angles for every trip</small>
+            </span>
+          </button>
+        </div>
+
+        <nav class="topbar-nav">
+          <button type="button" class="ghost-button" data-action="show-places">Places</button>
+          <button type="button" class="ghost-button" data-action="show-admin">Manage Data</button>
+          <button type="button" class="ghost-button" data-action="reset-data">Reset Sample Data</button>
+        </nav>
+      </header>
+
+      <main id="app"></main>
+    </div>
+
+    <template id="home-template">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Travel photography guide</p>
+          <h1>Find the best photo spots before you arrive.</h1>
+          <p class="hero-text">
+            Browse destinations, see proven shooting angles, open exact locations in Google Maps,
+            and keep your own spot library with photos and notes.
+          </p>
+
+          <form class="search-panel" id="search-form">
+            <label class="search-input">
+              <span class="sr-only">Search places or cities</span>
+              <input
+                id="search-input"
+                type="search"
+                name="search"
+                placeholder="Search a place, city, or country"
+                autocomplete="off"
+              />
+            </label>
+            <button type="submit" class="primary-button">Explore</button>
+          </form>
+
+          <div class="hero-points">
+            <span>Exact map link</span>
+            <span>Real sample photos</span>
+            <span>Short shooting tips</span>
+          </div>
+        </div>
+
+        <div class="hero-visual" id="hero-visual"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Featured</p>
+            <h2>Start with the most useful places</h2>
+          </div>
+          <button type="button" class="text-button" data-action="show-places">View all places</button>
+        </div>
+        <div class="card-grid" id="featured-places"></div>
+      </section>
+
+      <section class="section-block explain-grid">
+        <article class="info-card">
+          <p class="eyebrow">Step 1</p>
+          <h3>Choose a place</h3>
+          <p>Open a destination page with curated photo spots instead of generic sightseeing notes.</p>
+        </article>
+        <article class="info-card">
+          <p class="eyebrow">Step 2</p>
+          <h3>Study the angle</h3>
+          <p>See the framing, best time, lens range, and short standing instructions.</p>
+        </article>
+        <article class="info-card">
+          <p class="eyebrow">Step 3</p>
+          <h3>Open Google Maps</h3>
+          <p>Jump straight to the spot on your phone and use the sample shots as your guide.</p>
+        </article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Latest spots</p>
+            <h2>Recently added shooting locations</h2>
+          </div>
+        </div>
+        <div class="spot-preview-grid" id="latest-spots"></div>
+      </section>
+    </template>
+
+    <template id="places-template">
+      <section class="section-block compact-top">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Browse</p>
+            <h1>All places</h1>
+          </div>
+        </div>
+
+        <div class="filters-row">
+          <label class="filter-field">
+            <span>Search</span>
+            <input id="places-search" type="search" placeholder="Place, city, country" />
+          </label>
+          <label class="filter-field">
+            <span>Country</span>
+            <select id="country-filter"></select>
+          </label>
+          <label class="filter-field">
+            <span>Tag</span>
+            <select id="tag-filter"></select>
+          </label>
+        </div>
+
+        <div class="card-grid" id="places-grid"></div>
+      </section>
+    </template>
+
+    <template id="place-detail-template">
+      <section class="place-hero" id="place-hero"></section>
+      <section class="section-block compact-top">
+        <div class="overview-grid" id="overview-grid"></div>
+      </section>
+      <section class="section-block compact-top">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Photo spots</p>
+            <h2 id="spot-section-title"></h2>
+          </div>
+        </div>
+        <div class="spot-stack" id="spot-stack"></div>
+      </section>
+    </template>
+
+    <template id="admin-template">
+      <section class="section-block compact-top">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Local manager</p>
+            <h1>Manage app data in this browser</h1>
+          </div>
+        </div>
+
+        <div class="admin-layout">
+          <section class="info-card">
+            <h3>What this can do</h3>
+            <p>
+              Add places and photo spots, edit the sample content, and export everything as JSON.
+              The data is stored in your browser using local storage.
+            </p>
+            <div class="admin-actions">
+              <button class="primary-button" type="button" id="export-json">Export JSON</button>
+              <label class="secondary-button file-label">
+                Import JSON
+                <input id="import-json" type="file" accept="application/json" />
+              </label>
+            </div>
+            <p class="small-note">
+              Later, when you want your real photos and Google Maps links, send them to me and I can
+              replace the sample content.
+            </p>
+          </section>
+
+          <section class="admin-form-panel">
+            <div class="tabs-row">
+              <button class="tab-button active" type="button" data-tab="place">Add Place</button>
+              <button class="tab-button" type="button" data-tab="spot">Add Spot</button>
+            </div>
+
+            <form id="place-form" class="admin-form">
+              <div class="form-grid">
+                <label>
+                  <span>Place name</span>
+                  <input name="name" required />
+                </label>
+                <label>
+                  <span>Country</span>
+                  <input name="country" required />
+                </label>
+                <label>
+                  <span>City</span>
+                  <input name="city" required />
+                </label>
+                <label>
+                  <span>Cover image URL</span>
+                  <input name="coverImageUrl" type="url" required />
+                </label>
+              </div>
+
+              <label>
+                <span>Short description</span>
+                <textarea name="description" rows="3" required></textarea>
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  <span>Tags (comma separated)</span>
+                  <input name="tags" placeholder="Night, Architecture" />
+                </label>
+                <label>
+                  <span>Best for (comma separated)</span>
+                  <input name="bestFor" placeholder="Portrait, Night View" />
+                </label>
+                <label>
+                  <span>Best time</span>
+                  <input name="bestTime" placeholder="Sunset to Blue Hour" />
+                </label>
+                <label>
+                  <span>Crowd level</span>
+                  <input name="crowdLevel" placeholder="High" />
+                </label>
+              </div>
+
+              <label>
+                <span>Transport notes</span>
+                <textarea name="transportNotes" rows="2"></textarea>
+              </label>
+
+              <label>
+                <span>Walking notes</span>
+                <textarea name="walkingNotes" rows="2"></textarea>
+              </label>
+
+              <div class="check-row">
+                <label><input name="featured" type="checkbox" checked /> Featured</label>
+                <label><input name="published" type="checkbox" checked /> Published</label>
+              </div>
+
+              <button class="primary-button" type="submit">Save place</button>
+            </form>
+
+            <form id="spot-form" class="admin-form hidden">
+              <div class="form-grid">
+                <label>
+                  <span>Parent place</span>
+                  <select name="placeId" id="spot-place-select" required></select>
+                </label>
+                <label>
+                  <span>Spot name</span>
+                  <input name="name" required />
+                </label>
+                <label>
+                  <span>Google Maps URL</span>
+                  <input name="googleMapsUrl" type="url" required />
+                </label>
+                <label>
+                  <span>Cover image URL</span>
+                  <input name="coverImageUrl" type="url" required />
+                </label>
+              </div>
+
+              <label>
+                <span>Short description</span>
+                <textarea name="shortDescription" rows="2" required></textarea>
+              </label>
+
+              <label>
+                <span>Detailed notes</span>
+                <textarea name="fullDescription" rows="3"></textarea>
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  <span>Best time</span>
+                  <input name="bestTime" placeholder="Sunset / Blue Hour" />
+                </label>
+                <label>
+                  <span>Best for (comma separated)</span>
+                  <input name="bestFor" placeholder="Portrait, Architecture" />
+                </label>
+                <label>
+                  <span>Lens suggestion</span>
+                  <input name="lensSuggestion" placeholder="35mm to 70mm" />
+                </label>
+                <label>
+                  <span>Difficulty</span>
+                  <input name="difficulty" placeholder="Easy" />
+                </label>
+              </div>
+
+              <label>
+                <span>How to stand</span>
+                <textarea name="howToStand" rows="2"></textarea>
+              </label>
+              <label>
+                <span>Tips</span>
+                <textarea name="tips" rows="2"></textarea>
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  <span>Latitude</span>
+                  <input name="latitude" type="number" step="0.000001" />
+                </label>
+                <label>
+                  <span>Longitude</span>
+                  <input name="longitude" type="number" step="0.000001" />
+                </label>
+              </div>
+
+              <button class="primary-button" type="submit">Save spot</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="section-block compact-top">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Current content</p>
+              <h2>Places and spots in this browser</h2>
+            </div>
+          </div>
+          <div id="admin-list"></div>
+        </section>
+
+        <section class="section-block compact-top">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Advanced</p>
+              <h2>Edit all content as JSON</h2>
+            </div>
+          </div>
+          <form id="json-editor-form" class="admin-form">
+            <label>
+              <span>Data JSON</span>
+              <textarea id="json-editor" rows="18"></textarea>
+            </label>
+            <div class="admin-actions">
+              <button class="primary-button" type="submit">Save JSON</button>
+            </div>
+            <p class="small-note">
+              Format must stay as an object with `places` and `spots` arrays.
+            </p>
+          </form>
+        </section>
+      </section>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
