@@ -532,15 +532,8 @@ function mergeWithSeedData(existing) {
   const seedPlacesById = new Map(seedData.places.map((place) => [place.id, place]));
   const seedSpotsById = new Map(seedData.spots.map((spot) => [spot.id, spot]));
 
-  const mergedPlaces = safeExisting.places.map((place) => ({
-    ...seedPlacesById.get(place.id),
-    ...place,
-  }));
-
-  const mergedSpots = safeExisting.spots.map((spot) => ({
-    ...seedSpotsById.get(spot.id),
-    ...spot,
-  }));
+  const mergedPlaces = safeExisting.places.map((place) => sanitizePlaceRecord(place, seedPlacesById.get(place.id)));
+  const mergedSpots = safeExisting.spots.map((spot) => sanitizeSpotRecord(spot, seedSpotsById.get(spot.id)));
 
   const placeIds = new Set(mergedPlaces.map((place) => place.id));
   const spotIds = new Set(mergedSpots.map((spot) => spot.id));
@@ -555,6 +548,46 @@ function mergeWithSeedData(existing) {
       ...seedData.spots.filter((spot) => !spotIds.has(spot.id)),
     ],
   };
+}
+
+function sanitizePlaceRecord(place, seedPlace) {
+  const merged = {
+    ...seedPlace,
+    ...place,
+  };
+
+  if (isLocalFileUrl(merged.coverImageUrl) && seedPlace?.coverImageUrl) {
+    merged.coverImageUrl = seedPlace.coverImageUrl;
+  }
+
+  return merged;
+}
+
+function sanitizeSpotRecord(spot, seedSpot) {
+  const merged = {
+    ...seedSpot,
+    ...spot,
+  };
+
+  if (seedSpot?.photos?.length) {
+    const seedPhotos = seedSpot.photos;
+    merged.photos = (Array.isArray(merged.photos) ? merged.photos : []).map((photo, index) => {
+      const seedPhoto = seedPhotos[index] || seedPhotos.find((item) => item.caption === photo.caption) || seedPhotos[0];
+      if (isLocalFileUrl(photo.imageUrl) && seedPhoto?.imageUrl) {
+        return {
+          ...photo,
+          imageUrl: seedPhoto.imageUrl,
+        };
+      }
+      return photo;
+    });
+  }
+
+  return merged;
+}
+
+function isLocalFileUrl(value) {
+  return typeof value === "string" && value.startsWith("file:///");
 }
 
 function saveData(data) {
