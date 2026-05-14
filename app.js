@@ -23,7 +23,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Riverside bridge views in Asakusa with layered light, rail structure, and night reflections.",
-      coverImageUrl: "file:///Users/yamanwu/Desktop/WechatIMG3392.jpg",
+      coverImageUrl: "./assets/images/tokyo/hanakawado-sumida-river-bridge.jpg",
       tags: ["Night", "Bridge", "River"],
       bestFor: ["Night View", "Bridge", "Reflection"],
       bestTime: "Blue Hour to Night",
@@ -42,7 +42,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Low-light street and temple-side moments around Asakusa with intimate telephoto framing.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3393.jpg",
+      coverImageUrl: "./assets/images/tokyo/sensoji-dragon-fountain-night.jpg",
       tags: ["Temple", "Street", "Night"],
       bestFor: ["Portrait", "Street", "Detail"],
       bestTime: "Night",
@@ -60,7 +60,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Telephoto urban layers near Sumida with warm winter light and bridge-side street framing.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3394.jpg",
+      coverImageUrl: "./assets/images/tokyo/keisei-bridge-winter-streetlight.jpg",
       tags: ["Bridge", "Street", "Winter Light"],
       bestFor: ["Street", "Urban Layer", "Light"],
       bestTime: "Morning",
@@ -78,7 +78,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Observation deck views for dramatic sunsets, layered city light, and skyline reflections.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3395.jpg",
+      coverImageUrl: "./assets/images/tokyo/shibuya-sky-sunset-crowd-silhouette.jpg",
       tags: ["Observation Deck", "Sunset", "Cityscape"],
       bestFor: ["Sunset", "Cityscape", "Reflection"],
       bestTime: "Sunset to Blue Hour",
@@ -96,7 +96,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Quiet slope-side streets and candid urban scenes with strong winter light in Daikanyama.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3396.jpg",
+      coverImageUrl: "./assets/images/tokyo/daikanyama-slope-candid-crossing.jpg",
       tags: ["Street", "Candid", "Daylight"],
       bestFor: ["Street", "Candid", "Telephoto"],
       bestTime: "Morning to Afternoon",
@@ -114,7 +114,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Sunset and twilight waterfront compositions with layered reflections toward the skyline.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3397.jpg",
+      coverImageUrl: "./assets/images/tokyo/odaiba-statue-sunset-reflection.jpg",
       tags: ["Waterfront", "Sunset", "Reflection"],
       bestFor: ["Sunset", "Reflection", "Silhouette"],
       bestTime: "Sunset / Blue Hour",
@@ -132,7 +132,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "High-rise city views with clean Tokyo Tower alignment and compact night skyline framing.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3398.jpg",
+      coverImageUrl: "./assets/images/tokyo/ebisu-garden-place-tokyo-tower-night-view.jpg",
       tags: ["Night", "Observation", "Tokyo Tower"],
       bestFor: ["Night View", "Cityscape", "Telephoto"],
       bestTime: "Night",
@@ -150,7 +150,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Busy crosswalk street scenes with layered geometry and pedestrian flow in central Ginza.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3400.jpg",
+      coverImageUrl: "./assets/images/tokyo/ginza-koban-crosswalk-flow.jpg",
       tags: ["Street", "Crosswalk", "City"],
       bestFor: ["Street", "People", "Daylight"],
       bestTime: "Daytime",
@@ -168,7 +168,7 @@ const seedData = {
       city: "Tokyo",
       description:
         "Seasonal campus portraits and motion-filled leaf scenes around the University of Tokyo area.",
-      coverImageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/Tokyo%20University.jpg",
+      coverImageUrl: "./assets/images/tokyo/tokyo-university-golden-leaf-portrait.jpg",
       tags: ["Campus", "Autumn", "Portrait"],
       bestFor: ["Portrait", "Autumn", "Action"],
       bestTime: "Daytime",
@@ -204,7 +204,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Desktop/WechatIMG3392.jpg",
+          imageUrl: "./assets/images/tokyo/hanakawado-sumida-river-bridge.jpg",
           caption:
             "Photographed by Sting on Dec 31st, 2025. 135mm, f/2.0, 1/125, ISO 2000. Tobu Isesaki Line Sumida River Bridge, Hanakawado, Tokyo.",
           isCover: true,
@@ -234,7 +234,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3393.jpg",
+          imageUrl: "./assets/images/tokyo/sensoji-dragon-fountain-night.jpg",
           caption:
             "Photographed by Sting on Dec 31st, 2025. 135mm, f/2.8, 1/320, ISO 160. Senso-ji, Asakusa, Taito, Tokyo.",
           isCover: true,
@@ -264,7 +264,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3394.jpg",
+          imageUrl: "./assets/images/tokyo/keisei-bridge-winter-streetlight.jpg",
           caption:
             "Photographed by Sting on Dec 31st, 2025. 135mm, f/3.6, 1/1250, ISO 160. Keisei Bridge, Sumida, Tokyo.",
           isCover: true,
@@ -294,7 +294,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3395.jpg",
+          imageUrl: "./assets/images/tokyo/shibuya-sky-sunset-crowd-silhouette.jpg",
           caption:
             "Photographed by Sting on Dec 29th, 2025. 71mm, f/14.0, 1/160, ISO 100. Shibuya Sky, Tokyo.",
           isCover: true,
@@ -324,7 +324,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3399.jpg",
+          imageUrl: "./assets/images/tokyo/shibuya-sky-city-reflection-layer.jpg",
           caption:
             "Photographed by Sting on Dec 29th, 2025. 40mm, f/4.0, 1/500, ISO 100. Shibuya Sky, Tokyo.",
           isCover: true,
@@ -354,7 +354,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3396.jpg",
+          imageUrl: "./assets/images/tokyo/daikanyama-slope-candid-crossing.jpg",
           caption:
             "Photographed by Sting on Dec 28th, 2025. 135mm, f/2.2, 1/2000, ISO 320. Daikanyamacho, Tokyo.",
           isCover: true,
@@ -384,7 +384,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3397.jpg",
+          imageUrl: "./assets/images/tokyo/odaiba-statue-sunset-reflection.jpg",
           caption:
             "Photographed by Sting on Dec 27th, 2025. 135mm, f/2.5, 1/500, ISO 640. Odaiba Kaihinkoen, Minato City, Tokyo.",
           isCover: true,
@@ -414,7 +414,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3398.jpg",
+          imageUrl: "./assets/images/tokyo/ebisu-garden-place-tokyo-tower-night-view.jpg",
           caption:
             "Photographed by Sting on Dec 26th, 2025. 135mm, f/4.5, 1/15, ISO 3200. F38, 39, Ebisu Garden Place, Shibuya, Tokyo.",
           isCover: true,
@@ -444,7 +444,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/WechatIMG3400.jpg",
+          imageUrl: "./assets/images/tokyo/ginza-koban-crosswalk-flow.jpg",
           caption:
             "Photographed by Sting on Dec 30th, 2025. 40mm, f/5.0, 1/640, ISO 100. The Koban in the Ginza, Tokyo.",
           isCover: true,
@@ -474,7 +474,7 @@ const seedData = {
       published: true,
       photos: [
         {
-          imageUrl: "file:///Users/yamanwu/Downloads/Photos%20to%20upload/Tokyo/Tokyo%20University.jpg",
+          imageUrl: "./assets/images/tokyo/tokyo-university-golden-leaf-portrait.jpg",
           caption:
             "Photographed by Sting on Dec 31st, 2025. 135mm, f/2.2, 1/2500, ISO 160. Tokyo University Engineering Department entrance, Bunkyo, Tokyo.",
           isCover: true,
