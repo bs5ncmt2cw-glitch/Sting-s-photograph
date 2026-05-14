@@ -25,8 +25,9 @@
 
         <nav class="topbar-nav">
           <button type="button" class="ghost-button" data-action="show-places">Places</button>
-          <button type="button" class="ghost-button" data-action="show-admin">Manage Data</button>
-          <button type="button" class="ghost-button" data-action="reset-data">Reset Sample Data</button>
+          <button type="button" class="ghost-button hidden" id="admin-nav-button" data-action="show-admin">Manage Data</button>
+          <button type="button" class="ghost-button hidden" id="reset-nav-button" data-action="reset-data">Reset Sample Data</button>
+          <button type="button" class="ghost-button" id="admin-auth-button" data-action="admin-auth">Admin Access</button>
         </nav>
       </header>
 
@@ -352,6 +353,24 @@
             </p>
           </form>
         </section>
+      </section>
+    </template>
+
+    <template id="admin-login-template">
+      <section class="section-block compact-top admin-login-shell">
+        <div class="admin-login-card">
+          <p class="eyebrow">Restricted</p>
+          <h1>Admin Access</h1>
+          <p>Only the administrator can open data management and reset controls.</p>
+          <form id="admin-login-form" class="admin-form narrow-form">
+            <label>
+              <span>Admin passcode</span>
+              <input id="admin-passcode-input" name="passcode" type="password" required />
+            </label>
+            <button class="primary-button" type="submit">Unlock Admin</button>
+          </form>
+          <p class="small-note" id="admin-login-note"></p>
+        </div>
       </section>
     </template>
 

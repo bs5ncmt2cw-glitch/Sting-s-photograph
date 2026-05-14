@@ -1,4 +1,6 @@
 const STORAGE_KEY = "travel-photo-spots-data-v1";
+const ADMIN_AUTH_KEY = "travel-photo-spots-admin-auth-v1";
+const ADMIN_PASSCODE = "sting-admin-2026";
 const NON_USER_PLACE_IDS = new Set([
   "tokyo-tower",
   "louvre-museum",
@@ -491,6 +493,7 @@ const state = {
   placesSearch: "",
   countryFilter: "all",
   tagFilter: "all",
+  adminMessage: "",
 };
 
 const app = document.getElementById("app");
@@ -594,6 +597,29 @@ function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function isAdminAuthenticated() {
+  return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
+}
+
+function setAdminAuthenticated(value) {
+  localStorage.setItem(ADMIN_AUTH_KEY, value ? "true" : "false");
+  syncAdminControls();
+}
+
+function syncAdminControls() {
+  const adminButton = document.getElementById("admin-nav-button");
+  const resetButton = document.getElementById("reset-nav-button");
+  const authButton = document.getElementById("admin-auth-button");
+  const authed = isAdminAuthenticated();
+
+  adminButton?.classList.toggle("hidden", !authed);
+  resetButton?.classList.toggle("hidden", !authed);
+
+  if (authButton) {
+    authButton.textContent = authed ? "Admin Logout" : "Admin Access";
+  }
+}
+
 function slugify(value) {
   return value
     .toLowerCase()
@@ -666,6 +692,7 @@ function getSpotPreviewCard(spot) {
 function renderHome() {
   state.route = "home";
   app.innerHTML = document.getElementById("home-template").innerHTML;
+  syncAdminControls();
 
   const places = getPublishedPlaces();
   const featuredPlaces = places.filter((place) => place.featured).slice(0, 3);
@@ -707,6 +734,7 @@ function getHeroVisual(places) {
 function renderPlaces() {
   state.route = "places";
   app.innerHTML = document.getElementById("places-template").innerHTML;
+  syncAdminControls();
 
   const places = getPublishedPlaces();
   const countries = [...new Set(places.map((place) => place.country))].sort();
@@ -762,6 +790,7 @@ function renderPlaceDetail(placeId) {
   state.route = "place";
   state.placeId = place.id;
   app.innerHTML = document.getElementById("place-detail-template").innerHTML;
+  syncAdminControls();
 
   const spots = getSpotsForPlace(place.id);
   document.getElementById("place-hero").innerHTML = `
@@ -875,10 +904,38 @@ function getSpotCard(spot) {
 }
 
 function renderAdmin() {
+  if (!isAdminAuthenticated()) {
+    renderAdminLogin();
+    return;
+  }
+
   state.route = "admin";
   app.innerHTML = document.getElementById("admin-template").innerHTML;
+  syncAdminControls();
   bindAdminForms();
   renderAdminList();
+}
+
+function renderAdminLogin() {
+  state.route = "admin-login";
+  app.innerHTML = document.getElementById("admin-login-template").innerHTML;
+  syncAdminControls();
+
+  const note = document.getElementById("admin-login-note");
+  note.textContent = state.adminMessage || "Ask the administrator for the passcode.";
+
+  document.getElementById("admin-login-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const passcode = document.getElementById("admin-passcode-input").value;
+    if (passcode === ADMIN_PASSCODE) {
+      state.adminMessage = "";
+      setAdminAuthenticated(true);
+      renderAdmin();
+      return;
+    }
+    state.adminMessage = "Passcode not correct.";
+    renderAdminLogin();
+  });
 }
 
 function bindAdminForms() {
@@ -1076,7 +1133,16 @@ document.addEventListener("click", (event) => {
   if (action === "show-places") routeTo("places");
   if (action === "show-admin") routeTo("admin");
   if (action === "open-place") routeTo("place", place);
-  if (action === "reset-data") resetData();
+  if (action === "reset-data" && isAdminAuthenticated()) resetData();
+  if (action === "admin-auth") {
+    if (isAdminAuthenticated()) {
+      setAdminAuthenticated(false);
+      state.adminMessage = "";
+      routeTo("home");
+    } else {
+      renderAdminLogin();
+    }
+  }
 });
 
 renderHome();
