@@ -944,7 +944,7 @@ function renderPlaceDetail(placeId) {
 }
 
 function getSpotCard(spot) {
-  const photos = spot.photos.slice(0, 3);
+  const photos = Array.isArray(spot.photos) ? spot.photos : [];
   return `
     <article class="spot-card" id="${spot.id}">
       <div class="spot-gallery">
