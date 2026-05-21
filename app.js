@@ -494,6 +494,7 @@ const state = {
   countryFilter: "all",
   tagFilter: "all",
   adminMessage: "",
+  adminFeedback: "",
 };
 
 const app = document.getElementById("app");
@@ -597,6 +598,14 @@ function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function setAdminFeedback(message) {
+  state.adminFeedback = message;
+  const feedback = document.getElementById("admin-feedback");
+  if (feedback) {
+    feedback.textContent = message;
+  }
+}
+
 function isAdminAuthenticated() {
   return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
 }
@@ -626,6 +635,108 @@ function slugify(value) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function ensureUniqueId(items, baseId) {
+  const safeBase = baseId || `item-${Date.now()}`;
+  let candidate = safeBase;
+  let counter = 2;
+  const existingIds = new Set(items.map((item) => item.id));
+
+  while (existingIds.has(candidate)) {
+    candidate = `${safeBase}-${counter}`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resolveUploadedImage(fileInput, fallbackUrl) {
+  const file = fileInput?.files?.[0];
+  if (file) {
+    return fileToDataUrl(file);
+  }
+
+  return fallbackUrl.trim();
+}
+
+async function buildSpotPhotos(fileInput, fallbackUrl, name, captionPrefix) {
+  const files = Array.from(fileInput?.files || []);
+
+  if (files.length > 0) {
+    const images = await Promise.all(
+      files.map(async (file, index) => ({
+        imageUrl: await fileToDataUrl(file),
+        caption: captionPrefix
+          ? files.length === 1
+            ? captionPrefix
+            : `${captionPrefix} (${index + 1})`
+          : `${name} photo ${index + 1}`,
+        isCover: index === 0,
+      }))
+    );
+
+    return images;
+  }
+
+  if (fallbackUrl.trim()) {
+    return [
+      {
+        imageUrl: fallbackUrl.trim(),
+        caption: captionPrefix || `${name} cover photo`,
+        isCover: true,
+      },
+    ];
+  }
+
+  return [];
+}
+
+function renderUploadPreview(containerId, entries) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = entries
+    .map(
+      (entry) => `
+        <article class="upload-preview-card">
+          <div class="upload-preview-thumb" style="background-image:url('${entry.imageUrl}')"></div>
+          <p>${entry.label}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function bindImagePreview(inputId, containerId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  input.addEventListener("change", async () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) {
+      renderUploadPreview(containerId, []);
+      return;
+    }
+
+    const entries = await Promise.all(
+      files.map(async (file) => ({
+        imageUrl: await fileToDataUrl(file),
+        label: file.name,
+      }))
+    );
+
+    renderUploadPreview(containerId, entries);
+  });
 }
 
 function getPublishedPlaces() {
@@ -914,6 +1025,7 @@ function renderAdmin() {
   syncAdminControls();
   bindAdminForms();
   renderAdminList();
+  setAdminFeedback(state.adminFeedback);
 }
 
 function renderAdminLogin() {
@@ -942,11 +1054,16 @@ function bindAdminForms() {
   const placeForm = document.getElementById("place-form");
   const spotForm = document.getElementById("spot-form");
   const spotSelect = document.getElementById("spot-place-select");
+  const placeCoverFileInput = document.getElementById("place-cover-file");
+  const spotPhotoFileInput = document.getElementById("spot-photo-files");
   const places = getData().places;
 
   spotSelect.innerHTML = places
     .map((place) => `<option value="${place.id}">${place.name}</option>`)
     .join("");
+
+  bindImagePreview("place-cover-file", "place-cover-preview");
+  bindImagePreview("spot-photo-files", "spot-photo-preview");
 
   document.querySelectorAll("[data-tab]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -958,12 +1075,22 @@ function bindAdminForms() {
     });
   });
 
-  placeForm.addEventListener("submit", (event) => {
+  placeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(placeForm);
     const name = formData.get("name").toString().trim();
     const data = getData();
-    const id = slugify(name);
+    const id = ensureUniqueId(data.places, slugify(name));
+    const coverImageUrl = await resolveUploadedImage(
+      placeCoverFileInput,
+      formData.get("coverImageUrl").toString()
+    );
+
+    if (!coverImageUrl) {
+      alert("Upload a cover image or provide a cover image URL.");
+      return;
+    }
+
     data.places.unshift({
       id,
       slug: id,
@@ -971,7 +1098,7 @@ function bindAdminForms() {
       country: formData.get("country").toString().trim(),
       city: formData.get("city").toString().trim(),
       description: formData.get("description").toString().trim(),
-      coverImageUrl: formData.get("coverImageUrl").toString().trim(),
+      coverImageUrl,
       tags: splitList(formData.get("tags")),
       bestFor: splitList(formData.get("bestFor")),
       bestTime: formData.get("bestTime").toString().trim(),
@@ -982,18 +1109,32 @@ function bindAdminForms() {
       published: formData.get("published") === "on",
     });
     saveData(data);
+    state.adminFeedback = `Saved place: ${name}`;
     renderAdmin();
   });
 
-  spotForm.addEventListener("submit", (event) => {
+  spotForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(spotForm);
     const name = formData.get("name").toString().trim();
     const data = getData();
+    const photos = await buildSpotPhotos(
+      spotPhotoFileInput,
+      formData.get("coverImageUrl").toString(),
+      name,
+      formData.get("photoCaption").toString().trim()
+    );
+
+    if (!photos.length) {
+      alert("Upload at least one spot photo or provide a fallback photo URL.");
+      return;
+    }
+
     data.spots.unshift({
-      id: slugify(name),
+      id: ensureUniqueId(data.spots, slugify(name)),
       placeId: formData.get("placeId").toString(),
       name,
+      photographer: formData.get("photographer").toString().trim(),
       shortDescription: formData.get("shortDescription").toString().trim(),
       fullDescription: formData.get("fullDescription").toString().trim(),
       latitude: parseMaybeNumber(formData.get("latitude")),
@@ -1005,16 +1146,11 @@ function bindAdminForms() {
       howToStand: formData.get("howToStand").toString().trim(),
       tips: formData.get("tips").toString().trim(),
       difficulty: formData.get("difficulty").toString().trim(),
-      published: true,
-      photos: [
-        {
-          imageUrl: formData.get("coverImageUrl").toString().trim(),
-          caption: `${name} cover photo`,
-          isCover: true,
-        },
-      ],
+      published: formData.get("published") === "on",
+      photos,
     });
     saveData(data);
+    state.adminFeedback = `Saved spot: ${name}`;
     renderAdmin();
   });
 
@@ -1038,6 +1174,7 @@ function bindAdminForms() {
       return;
     }
     saveData(parsed);
+    state.adminFeedback = `Imported ${parsed.places.length} places and ${parsed.spots.length} spots.`;
     renderAdmin();
   });
 
@@ -1051,6 +1188,7 @@ function bindAdminForms() {
         throw new Error("Expected places and spots arrays.");
       }
       saveData(parsed);
+      state.adminFeedback = "Saved JSON data.";
       renderAdmin();
     } catch (error) {
       alert(`JSON save failed: ${error.message}`);

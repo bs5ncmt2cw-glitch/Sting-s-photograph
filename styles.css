@@ -568,8 +568,39 @@ textarea {
   gap: 14px;
 }
 
+.admin-feedback {
+  min-height: 24px;
+}
+
 .form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.upload-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.upload-preview-card {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.upload-preview-thumb {
+  aspect-ratio: 4 / 3;
+  background-size: cover;
+  background-position: center;
+}
+
+.upload-preview-card p {
+  margin: 0;
+  padding: 10px 12px 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
 }
 
 .tab-button.active {
