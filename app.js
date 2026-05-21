@@ -1,6 +1,4 @@
 const STORAGE_KEY = "travel-photo-spots-data-v1";
-const ADMIN_AUTH_KEY = "travel-photo-spots-admin-auth-v1";
-const ADMIN_PASSCODE = "sting-admin-2026";
 const NON_USER_PLACE_IDS = new Set([
   "tokyo-tower",
   "louvre-museum",
@@ -495,6 +493,8 @@ const state = {
   tagFilter: "all",
   adminMessage: "",
   adminFeedback: "",
+  adminAuthenticated: false,
+  authApiAvailable: true,
 };
 
 const app = document.getElementById("app");
@@ -607,12 +607,76 @@ function setAdminFeedback(message) {
 }
 
 function isAdminAuthenticated() {
-  return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
+  return state.adminAuthenticated;
 }
 
-function setAdminAuthenticated(value) {
-  localStorage.setItem(ADMIN_AUTH_KEY, value ? "true" : "false");
+async function refreshAdminSession() {
+  try {
+    const response = await fetch("/api/admin/session", {
+      credentials: "same-origin",
+    });
+
+    if (!response.ok) {
+      throw new Error("Admin session check failed.");
+    }
+
+    const payload = await response.json();
+    state.adminAuthenticated = Boolean(payload.authenticated);
+    state.authApiAvailable = true;
+    syncAdminControls();
+    return state.adminAuthenticated;
+  } catch {
+    state.adminAuthenticated = false;
+    state.authApiAvailable = false;
+    syncAdminControls();
+    return false;
+  }
+}
+
+async function loginAdmin(passcode) {
+  const response = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ passcode }),
+  });
+
+  if (response.ok) {
+    state.adminAuthenticated = true;
+    state.authApiAvailable = true;
+    syncAdminControls();
+    return { ok: true };
+  }
+
+  let message = "Passcode not correct.";
+  try {
+    const payload = await response.json();
+    if (payload?.message) {
+      message = payload.message;
+    }
+  } catch {
+    // Keep the fallback message if the response body is not JSON.
+  }
+
+  state.adminAuthenticated = false;
+  state.authApiAvailable = true;
   syncAdminControls();
+  return { ok: false, message };
+}
+
+async function logoutAdmin() {
+  try {
+    await fetch("/api/admin/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } finally {
+    state.adminAuthenticated = false;
+    state.authApiAvailable = true;
+    syncAdminControls();
+  }
 }
 
 function syncAdminControls() {
@@ -625,7 +689,11 @@ function syncAdminControls() {
   resetButton?.classList.toggle("hidden", !authed);
 
   if (authButton) {
-    authButton.textContent = authed ? "Admin Logout" : "Admin Access";
+    authButton.textContent = authed
+      ? "Admin Logout"
+      : state.authApiAvailable
+        ? "Admin Access"
+        : "Admin Requires Server";
   }
 }
 
@@ -1034,18 +1102,27 @@ function renderAdminLogin() {
   syncAdminControls();
 
   const note = document.getElementById("admin-login-note");
-  note.textContent = state.adminMessage || "Ask the administrator for the passcode.";
+  note.textContent = state.authApiAvailable
+    ? state.adminMessage || "Ask the administrator for the passcode."
+    : "Start the local server to use admin login. The file:// version cannot verify server-side auth.";
 
-  document.getElementById("admin-login-form").addEventListener("submit", (event) => {
+  document.getElementById("admin-login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (!state.authApiAvailable) {
+      state.adminMessage = "Admin login requires the local server.";
+      renderAdminLogin();
+      return;
+    }
+
     const passcode = document.getElementById("admin-passcode-input").value;
-    if (passcode === ADMIN_PASSCODE) {
+    const result = await loginAdmin(passcode);
+    if (result.ok) {
       state.adminMessage = "";
-      setAdminAuthenticated(true);
       renderAdmin();
       return;
     }
-    state.adminMessage = "Passcode not correct.";
+    state.adminMessage = result.message;
     renderAdminLogin();
   });
 }
@@ -1261,7 +1338,7 @@ function routeTo(route, placeId = null) {
   if (route === "place" && placeId) renderPlaceDetail(placeId);
 }
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const target = event.target.closest("[data-action]");
   if (!target) return;
 
@@ -1274,7 +1351,7 @@ document.addEventListener("click", (event) => {
   if (action === "reset-data" && isAdminAuthenticated()) resetData();
   if (action === "admin-auth") {
     if (isAdminAuthenticated()) {
-      setAdminAuthenticated(false);
+      await logoutAdmin();
       state.adminMessage = "";
       routeTo("home");
     } else {
@@ -1283,4 +1360,9 @@ document.addEventListener("click", (event) => {
   }
 });
 
-renderHome();
+async function initApp() {
+  await refreshAdminSession();
+  renderHome();
+}
+
+initApp();
