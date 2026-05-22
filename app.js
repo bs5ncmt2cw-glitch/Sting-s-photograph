@@ -495,6 +495,9 @@ const state = {
   adminFeedback: "",
   adminAuthenticated: false,
   authApiAvailable: true,
+  contentApiAvailable: false,
+  sharedContentInitialized: false,
+  data: null,
 };
 
 const app = document.getElementById("app");
@@ -503,7 +506,7 @@ function cloneSeedData() {
   return JSON.parse(JSON.stringify(seedData));
 }
 
-function getData() {
+function getLocalData() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
     const fresh = cloneSeedData();
@@ -521,6 +524,10 @@ function getData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
     return fresh;
   }
+}
+
+function getData() {
+  return state.data || getLocalData();
 }
 
 function mergeWithSeedData(existing) {
@@ -595,6 +602,7 @@ function isLocalFileUrl(value) {
 }
 
 function saveData(data) {
+  state.data = mergeWithSeedData(data);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -631,6 +639,71 @@ async function refreshAdminSession() {
     syncAdminControls();
     return false;
   }
+}
+
+async function refreshContentData() {
+  try {
+    const response = await fetch("/api/content", {
+      credentials: "same-origin",
+    });
+
+    if (response.status === 404) {
+      state.contentApiAvailable = true;
+      state.sharedContentInitialized = false;
+      state.data = mergeWithSeedData(getLocalData());
+      return state.data;
+    }
+
+    if (!response.ok) {
+      throw new Error("Content API check failed.");
+    }
+
+    const payload = await response.json();
+    state.contentApiAvailable = true;
+    state.sharedContentInitialized = Boolean(payload.initialized);
+    state.data = mergeWithSeedData(payload.data);
+    return state.data;
+  } catch {
+    state.contentApiAvailable = false;
+    state.sharedContentInitialized = false;
+    state.data = mergeWithSeedData(getLocalData());
+    return state.data;
+  }
+}
+
+async function persistData(data) {
+  const merged = mergeWithSeedData(data);
+  state.data = merged;
+
+  if (state.contentApiAvailable) {
+    const response = await fetch("/api/admin/content", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify(merged),
+    });
+
+    if (!response.ok) {
+      let message = "Unable to save shared content.";
+      try {
+        const payload = await response.json();
+        if (payload?.message) {
+          message = payload.message;
+        }
+      } catch {
+        // Keep fallback message.
+      }
+      throw new Error(message);
+    }
+
+    state.sharedContentInitialized = true;
+  } else {
+    saveData(merged);
+  }
+
+  return merged;
 }
 
 async function loginAdmin(passcode) {
@@ -1185,7 +1258,12 @@ function bindAdminForms() {
       featured: formData.get("featured") === "on",
       published: formData.get("published") === "on",
     });
-    saveData(data);
+    try {
+      await persistData(data);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     state.adminFeedback = `Saved place: ${name}`;
     renderAdmin();
   });
@@ -1226,7 +1304,12 @@ function bindAdminForms() {
       published: formData.get("published") === "on",
       photos,
     });
-    saveData(data);
+    try {
+      await persistData(data);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     state.adminFeedback = `Saved spot: ${name}`;
     renderAdmin();
   });
@@ -1250,21 +1333,26 @@ function bindAdminForms() {
       alert("Invalid JSON. Expected places and spots arrays.");
       return;
     }
-    saveData(parsed);
+    try {
+      await persistData(parsed);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     state.adminFeedback = `Imported ${parsed.places.length} places and ${parsed.spots.length} spots.`;
     renderAdmin();
   });
 
   const jsonEditor = document.getElementById("json-editor");
   jsonEditor.value = JSON.stringify(getData(), null, 2);
-  document.getElementById("json-editor-form").addEventListener("submit", (event) => {
+  document.getElementById("json-editor-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const parsed = JSON.parse(jsonEditor.value);
       if (!parsed.places || !parsed.spots) {
         throw new Error("Expected places and spots arrays.");
       }
-      saveData(parsed);
+      await persistData(parsed);
       state.adminFeedback = "Saved JSON data.";
       renderAdmin();
     } catch (error) {
@@ -1327,7 +1415,16 @@ function parseMaybeNumber(value) {
 }
 
 function resetData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cloneSeedData()));
+  const fresh = cloneSeedData();
+  state.data = fresh;
+  if (state.contentApiAvailable) {
+    persistData(fresh)
+      .then(() => routeTo("home"))
+      .catch((error) => alert(error.message));
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
   routeTo("home");
 }
 
@@ -1362,6 +1459,7 @@ document.addEventListener("click", async (event) => {
 
 async function initApp() {
   await refreshAdminSession();
+  await refreshContentData();
   renderHome();
 }
 

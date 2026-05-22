@@ -9,6 +9,8 @@ A self-contained browser app for collecting travel photo locations, Google Maps 
 - [app.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/app.js): seed data, routing, rendering, local storage persistence, admin upload logic, frontend auth client
 - [server.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/server.js): static file server and admin auth API
 - [package.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/package.json): local run script
+- [functions](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions): Cloudflare Pages Functions for auth and shared content APIs
+- [schema.sql](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/schema.sql): D1 schema for shared content storage
 - [assets/images](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/assets/images): bundled sample photography
 
 ## Run it
@@ -45,9 +47,7 @@ ADMIN_PASSWORD=your-secure-password
 
 5. Deploy, then open the generated `onrender.com` URL
 
-Render Hobby can run this app, but remember:
-- admin authentication runs on the server
-- travel place and spot data still stays in each browser's local storage
+Render Hobby can run this app, but in the current repo it only provides server-backed auth. Shared content storage is implemented for Cloudflare Pages via D1.
 
 ## Deploy on Cloudflare
 
@@ -69,12 +69,22 @@ ADMIN_PASSWORD=your-secure-password
 ADMIN_SESSION_SECRET=your-long-random-secret
 ```
 
-4. Deploy the project
+4. Create a Cloudflare D1 database and bind it to the Pages project as:
+
+```text
+CONTENT_DB
+```
+
+5. Run the schema in [schema.sql](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/schema.sql)
+
+6. Deploy the project
 
 Cloudflare Pages Functions will use:
 - [/functions/api/admin/session.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/session.js)
 - [/functions/api/admin/login.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/login.js)
 - [/functions/api/admin/logout.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/logout.js)
+- [/functions/api/content.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/content.js)
+- [/functions/api/admin/content.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/content.js)
 
 The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/_routes.json) file limits function execution to `/api/*` routes so static assets stay static.
 
@@ -84,11 +94,12 @@ The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-we
 - Place browser with search and filters
 - Place detail pages with spot cards and Google Maps links
 - Admin portal with server-verified login
+- Shared content API backed by Cloudflare D1 when available
 - Direct image upload for place covers and spot photos
 - JSON export and import for backup and migration
 
 ## Important limitations
 
-- Uploaded images are stored in browser local storage as data URLs. Large libraries can hit browser storage limits.
-- This is still a no-backend MVP. Data is tied to the current browser unless exported.
-- Admin content storage is still browser-local. The server currently protects admin access, not the underlying data model.
+- Local development mode still falls back to browser local storage for content because the local Node server does not implement the D1 content APIs.
+- Cloudflare shared content currently uses a single JSON document in D1. This is practical for early use, but larger libraries should move image blobs to R2 and normalize records later.
+- Uploaded images are still stored as data URLs inside the content payload. This works for small libraries, but it will become inefficient as the content grows.
