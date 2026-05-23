@@ -706,6 +706,33 @@ async function persistData(data) {
   return merged;
 }
 
+async function uploadImageFile(file, category) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+
+  const response = await fetch("/api/admin/upload-image", {
+    method: "POST",
+    credentials: "same-origin",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = "Unable to upload image.";
+    try {
+      const payload = await response.json();
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      // Keep fallback message.
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
 async function loginAdmin(passcode) {
   const response = await fetch("/api/admin/login", {
     method: "POST",
@@ -804,6 +831,10 @@ function fileToDataUrl(file) {
 async function resolveUploadedImage(fileInput, fallbackUrl) {
   const file = fileInput?.files?.[0];
   if (file) {
+    if (state.contentApiAvailable) {
+      const uploaded = await uploadImageFile(file, "place");
+      return uploaded.imageUrl;
+    }
     return fileToDataUrl(file);
   }
 
@@ -814,6 +845,22 @@ async function buildSpotPhotos(fileInput, fallbackUrl, name, captionPrefix) {
   const files = Array.from(fileInput?.files || []);
 
   if (files.length > 0) {
+    if (state.contentApiAvailable) {
+      const uploadedImages = await Promise.all(
+        files.map((file) => uploadImageFile(file, "spot"))
+      );
+
+      return uploadedImages.map((uploaded, index) => ({
+        imageUrl: uploaded.imageUrl,
+        caption: captionPrefix
+          ? files.length === 1
+            ? captionPrefix
+            : `${captionPrefix} (${index + 1})`
+          : `${name} photo ${index + 1}`,
+        isCover: index === 0,
+      }));
+    }
+
     const images = await Promise.all(
       files.map(async (file, index) => ({
         imageUrl: await fileToDataUrl(file),

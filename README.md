@@ -75,9 +75,15 @@ ADMIN_SESSION_SECRET=your-long-random-secret
 CONTENT_DB
 ```
 
-5. Run the schema in [schema.sql](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/schema.sql)
+5. Create an R2 bucket and bind it to the Pages project as:
 
-6. Deploy the project
+```text
+IMAGES_BUCKET
+```
+
+6. Run the schema in [schema.sql](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/schema.sql)
+
+7. Deploy the project
 
 Cloudflare Pages Functions will use:
 - [/functions/api/admin/session.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/session.js)
@@ -85,6 +91,8 @@ Cloudflare Pages Functions will use:
 - [/functions/api/admin/logout.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/logout.js)
 - [/functions/api/content.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/content.js)
 - [/functions/api/admin/content.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/content.js)
+- [/functions/api/admin/upload-image.js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/admin/upload-image.js)
+- [/functions/api/images/[key].js](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/functions/api/images/[key].js)
 
 The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-web-app/_routes.json) file limits function execution to `/api/*` routes so static assets stay static.
 
@@ -102,4 +110,4 @@ The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-we
 
 - Local development mode still falls back to browser local storage for content because the local Node server does not implement the D1 content APIs.
 - Cloudflare shared content currently uses a single JSON document in D1. This is practical for early use, but larger libraries should move image blobs to R2 and normalize records later.
-- Uploaded images are still stored as data URLs inside the content payload. This works for small libraries, but it will become inefficient as the content grows.
+- On Cloudflare, uploaded images are now stored in R2 and referenced by URL from shared content. Local `localhost` mode still falls back to browser data URLs because the local Node server does not implement the R2 upload APIs.
