@@ -185,11 +185,20 @@
           <section class="admin-form-panel">
             <p class="admin-feedback small-note" id="admin-feedback"></p>
             <div class="tabs-row">
-              <button class="tab-button active" type="button" data-tab="place">Add Place</button>
-              <button class="tab-button" type="button" data-tab="spot">Add Spot</button>
+              <button class="tab-button active" type="button" data-tab="place" id="place-tab-button">Add Place</button>
+              <button class="tab-button" type="button" data-tab="spot" id="spot-tab-button">Add Spot</button>
             </div>
 
             <form id="place-form" class="admin-form">
+              <div class="section-header compact-header">
+                <div>
+                  <p class="eyebrow" id="place-form-eyebrow">Create</p>
+                  <h3 id="place-form-title">Add place</h3>
+                </div>
+                <button class="secondary-button hidden" type="button" id="cancel-place-edit">
+                  Cancel edit
+                </button>
+              </div>
               <div class="form-grid">
                 <label>
                   <span>Place name</span>
@@ -254,10 +263,19 @@
                 <label><input name="published" type="checkbox" checked /> Published</label>
               </div>
 
-              <button class="primary-button" type="submit">Save place</button>
+              <button class="primary-button" type="submit" id="place-submit-button">Save place</button>
             </form>
 
             <form id="spot-form" class="admin-form hidden">
+              <div class="section-header compact-header">
+                <div>
+                  <p class="eyebrow" id="spot-form-eyebrow">Create</p>
+                  <h3 id="spot-form-title">Add spot</h3>
+                </div>
+                <button class="secondary-button hidden" type="button" id="cancel-spot-edit">
+                  Cancel edit
+                </button>
+              </div>
               <div class="form-grid">
                 <label>
                   <span>Parent place</span>
@@ -351,7 +369,7 @@
                 <label><input name="published" type="checkbox" checked /> Published</label>
               </div>
 
-              <button class="primary-button" type="submit">Save spot</button>
+              <button class="primary-button" type="submit" id="spot-submit-button">Save spot</button>
             </form>
           </section>
         </div>

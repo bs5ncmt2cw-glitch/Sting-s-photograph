@@ -498,6 +498,9 @@ const state = {
   contentApiAvailable: false,
   sharedContentInitialized: false,
   data: null,
+  adminTab: "place",
+  editingPlaceId: null,
+  editingSpotId: null,
 };
 
 const app = document.getElementById("app");
@@ -744,6 +747,12 @@ function collectR2ImageUrlsFromSpots(spots) {
   ];
 }
 
+function collectR2ImageUrlsFromPlace(place) {
+  return typeof place?.coverImageUrl === "string" && place.coverImageUrl.startsWith("/api/images/")
+    ? [place.coverImageUrl]
+    : [];
+}
+
 async function deleteUploadedImages(imageUrls) {
   const urls = [...new Set((imageUrls || []).filter(Boolean))];
   if (!urls.length || !state.contentApiAvailable) return;
@@ -768,6 +777,15 @@ async function deleteUploadedImages(imageUrls) {
       // Keep fallback message.
     }
     throw new Error(message);
+  }
+}
+
+async function cleanupUploadedImages(imageUrls) {
+  try {
+    await deleteUploadedImages(imageUrls);
+    return "";
+  } catch (error) {
+    return error.message || "Uploaded image cleanup failed.";
   }
 }
 
@@ -941,6 +959,100 @@ function renderUploadPreview(containerId, entries) {
       `
     )
     .join("");
+}
+
+function joinList(value) {
+  return Array.isArray(value) ? value.join(", ") : "";
+}
+
+function setActiveAdminTab(tab, placeForm, spotForm) {
+  state.adminTab = tab;
+  document.querySelectorAll("[data-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tab === tab);
+  });
+  placeForm.classList.toggle("hidden", tab !== "place");
+  spotForm.classList.toggle("hidden", tab !== "spot");
+}
+
+function resetAdminEditState(tab = "place") {
+  state.editingPlaceId = null;
+  state.editingSpotId = null;
+  state.adminTab = tab;
+}
+
+function populatePlaceForm(placeForm, place) {
+  placeForm.elements.name.value = place?.name || "";
+  placeForm.elements.country.value = place?.country || "";
+  placeForm.elements.city.value = place?.city || "";
+  placeForm.elements.coverImageUrl.value = "";
+  placeForm.elements.description.value = place?.description || "";
+  placeForm.elements.tags.value = joinList(place?.tags);
+  placeForm.elements.bestFor.value = joinList(place?.bestFor);
+  placeForm.elements.bestTime.value = place?.bestTime || "";
+  placeForm.elements.crowdLevel.value = place?.crowdLevel || "";
+  placeForm.elements.transportNotes.value = place?.transportNotes || "";
+  placeForm.elements.walkingNotes.value = place?.walkingNotes || "";
+  placeForm.elements.featured.checked = Boolean(place?.featured);
+  placeForm.elements.published.checked = place ? Boolean(place.published) : true;
+
+  renderUploadPreview(
+    "place-cover-preview",
+    place?.coverImageUrl
+      ? [{ imageUrl: place.coverImageUrl, label: "Current cover image" }]
+      : []
+  );
+}
+
+function populateSpotForm(spotForm, spot) {
+  spotForm.elements.placeId.value = spot?.placeId || "";
+  spotForm.elements.name.value = spot?.name || "";
+  spotForm.elements.googleMapsUrl.value = spot?.googleMapsUrl || "";
+  spotForm.elements.photographer.value = spot?.photographer || "";
+  spotForm.elements.coverImageUrl.value = "";
+  spotForm.elements.photoCaption.value = "";
+  spotForm.elements.shortDescription.value = spot?.shortDescription || "";
+  spotForm.elements.fullDescription.value = spot?.fullDescription || "";
+  spotForm.elements.bestTime.value = spot?.bestTime || "";
+  spotForm.elements.bestFor.value = joinList(spot?.bestFor);
+  spotForm.elements.lensSuggestion.value = spot?.lensSuggestion || "";
+  spotForm.elements.difficulty.value = spot?.difficulty || "";
+  spotForm.elements.howToStand.value = spot?.howToStand || "";
+  spotForm.elements.tips.value = spot?.tips || "";
+  spotForm.elements.latitude.value = spot?.latitude ?? "";
+  spotForm.elements.longitude.value = spot?.longitude ?? "";
+  spotForm.elements.published.checked = spot ? Boolean(spot.published) : true;
+
+  renderUploadPreview(
+    "spot-photo-preview",
+    (Array.isArray(spot?.photos) ? spot.photos : []).map((photo, index) => ({
+      imageUrl: photo.imageUrl,
+      label: photo.caption || `Current photo ${index + 1}`,
+    }))
+  );
+}
+
+function applyAdminFormState(placeForm, spotForm) {
+  const place = state.editingPlaceId
+    ? getData().places.find((item) => item.id === state.editingPlaceId)
+    : null;
+  const spot = state.editingSpotId
+    ? getData().spots.find((item) => item.id === state.editingSpotId)
+    : null;
+
+  populatePlaceForm(placeForm, place);
+  populateSpotForm(spotForm, spot);
+
+  document.getElementById("place-form-eyebrow").textContent = place ? "Edit" : "Create";
+  document.getElementById("place-form-title").textContent = place ? `Edit ${place.name}` : "Add place";
+  document.getElementById("place-submit-button").textContent = place ? "Update place" : "Save place";
+  document.getElementById("cancel-place-edit").classList.toggle("hidden", !place);
+
+  document.getElementById("spot-form-eyebrow").textContent = spot ? "Edit" : "Create";
+  document.getElementById("spot-form-title").textContent = spot ? `Edit ${spot.name}` : "Add spot";
+  document.getElementById("spot-submit-button").textContent = spot ? "Update spot" : "Save spot";
+  document.getElementById("cancel-spot-edit").classList.toggle("hidden", !spot);
+
+  setActiveAdminTab(state.adminTab, placeForm, spotForm);
 }
 
 function bindImagePreview(inputId, containerId) {
@@ -1302,38 +1414,53 @@ function bindAdminForms() {
 
   document.querySelectorAll("[data-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll("[data-tab]").forEach((tab) => tab.classList.remove("active"));
-      button.classList.add("active");
-      const showSpot = button.dataset.tab === "spot";
-      placeForm.classList.toggle("hidden", showSpot);
-      spotForm.classList.toggle("hidden", !showSpot);
+      setActiveAdminTab(button.dataset.tab, placeForm, spotForm);
     });
   });
+
+  document.getElementById("cancel-place-edit").addEventListener("click", () => {
+    resetAdminEditState("place");
+    placeForm.reset();
+    applyAdminFormState(placeForm, spotForm);
+  });
+
+  document.getElementById("cancel-spot-edit").addEventListener("click", () => {
+    resetAdminEditState("spot");
+    spotForm.reset();
+    applyAdminFormState(placeForm, spotForm);
+  });
+
+  applyAdminFormState(placeForm, spotForm);
 
   placeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(placeForm);
     const name = formData.get("name").toString().trim();
     const data = getData();
-    const id = ensureUniqueId(data.places, slugify(name));
+    const existingPlace = state.editingPlaceId
+      ? data.places.find((item) => item.id === state.editingPlaceId)
+      : null;
+    const id = existingPlace ? existingPlace.id : ensureUniqueId(data.places, slugify(name));
     const coverImageUrl = await resolveUploadedImage(
       placeCoverFileInput,
       formData.get("coverImageUrl").toString()
     );
 
-    if (!coverImageUrl) {
+    const finalCoverImageUrl = coverImageUrl || existingPlace?.coverImageUrl || "";
+
+    if (!finalCoverImageUrl) {
       alert("Upload a cover image or provide a cover image URL.");
       return;
     }
 
-    data.places.unshift({
+    const nextPlace = {
       id,
-      slug: id,
+      slug: slugify(name) || existingPlace?.slug || id,
       name,
       country: formData.get("country").toString().trim(),
       city: formData.get("city").toString().trim(),
       description: formData.get("description").toString().trim(),
-      coverImageUrl,
+      coverImageUrl: finalCoverImageUrl,
       tags: splitList(formData.get("tags")),
       bestFor: splitList(formData.get("bestFor")),
       bestTime: formData.get("bestTime").toString().trim(),
@@ -1342,14 +1469,33 @@ function bindAdminForms() {
       walkingNotes: formData.get("walkingNotes").toString().trim(),
       featured: formData.get("featured") === "on",
       published: formData.get("published") === "on",
-    });
-    try {
-      await persistData(data);
-    } catch (error) {
-      alert(error.message);
-      return;
+    };
+
+    if (existingPlace) {
+      const removedImageUrls =
+        existingPlace.coverImageUrl !== nextPlace.coverImageUrl
+          ? collectR2ImageUrlsFromPlace(existingPlace)
+          : [];
+      data.places = data.places.map((item) => (item.id === existingPlace.id ? nextPlace : item));
+      try {
+        await persistData(data);
+      } catch (error) {
+        alert(error.message);
+        return;
+      }
+      const cleanupMessage = await cleanupUploadedImages(removedImageUrls);
+      state.adminFeedback = `Updated place: ${name}${cleanupMessage ? ` (${cleanupMessage})` : ""}`;
+    } else {
+      data.places.unshift(nextPlace);
+      try {
+        await persistData(data);
+      } catch (error) {
+        alert(error.message);
+        return;
+      }
+      state.adminFeedback = `Saved place: ${name}`;
     }
-    state.adminFeedback = `Saved place: ${name}`;
+    resetAdminEditState("place");
     renderAdmin();
   });
 
@@ -1358,6 +1504,9 @@ function bindAdminForms() {
     const formData = new FormData(spotForm);
     const name = formData.get("name").toString().trim();
     const data = getData();
+    const existingSpot = state.editingSpotId
+      ? data.spots.find((item) => item.id === state.editingSpotId)
+      : null;
     const photos = await buildSpotPhotos(
       spotPhotoFileInput,
       formData.get("coverImageUrl").toString(),
@@ -1365,13 +1514,15 @@ function bindAdminForms() {
       formData.get("photoCaption").toString().trim()
     );
 
-    if (!photos.length) {
+    const finalPhotos = photos.length ? photos : existingSpot?.photos || [];
+
+    if (!finalPhotos.length) {
       alert("Upload at least one spot photo or provide a fallback photo URL.");
       return;
     }
 
-    data.spots.unshift({
-      id: ensureUniqueId(data.spots, slugify(name)),
+    const nextSpot = {
+      id: existingSpot ? existingSpot.id : ensureUniqueId(data.spots, slugify(name)),
       placeId: formData.get("placeId").toString(),
       name,
       photographer: formData.get("photographer").toString().trim(),
@@ -1387,15 +1538,33 @@ function bindAdminForms() {
       tips: formData.get("tips").toString().trim(),
       difficulty: formData.get("difficulty").toString().trim(),
       published: formData.get("published") === "on",
-      photos,
-    });
-    try {
-      await persistData(data);
-    } catch (error) {
-      alert(error.message);
-      return;
+      photos: finalPhotos,
+    };
+
+    if (existingSpot) {
+      const previousUrls = collectR2ImageUrlsFromSpots([existingSpot]);
+      const nextUrls = collectR2ImageUrlsFromSpots([{ photos: finalPhotos }]);
+      const removedImageUrls = previousUrls.filter((imageUrl) => !nextUrls.includes(imageUrl));
+      data.spots = data.spots.map((item) => (item.id === existingSpot.id ? nextSpot : item));
+      try {
+        await persistData(data);
+      } catch (error) {
+        alert(error.message);
+        return;
+      }
+      const cleanupMessage = await cleanupUploadedImages(removedImageUrls);
+      state.adminFeedback = `Updated spot: ${name}${cleanupMessage ? ` (${cleanupMessage})` : ""}`;
+    } else {
+      data.spots.unshift(nextSpot);
+      try {
+        await persistData(data);
+      } catch (error) {
+        alert(error.message);
+        return;
+      }
+      state.adminFeedback = `Saved spot: ${name}`;
     }
-    state.adminFeedback = `Saved spot: ${name}`;
+    resetAdminEditState("spot");
     renderAdmin();
   });
 
@@ -1464,6 +1633,14 @@ function renderAdminList() {
             <p>${place.description}</p>
             <div class="inline-actions admin-danger-actions">
               <button
+                class="text-button"
+                type="button"
+                data-action="edit-place"
+                data-place-id="${place.id}"
+              >
+                Edit place
+              </button>
+              <button
                 class="text-button danger-button"
                 type="button"
                 data-action="delete-place"
@@ -1481,6 +1658,14 @@ function renderAdminList() {
                     <p>${spot.shortDescription}</p>
                     <div class="inline-actions">
                       <a href="${spot.googleMapsUrl}" target="_blank" rel="noreferrer">Open map</a>
+                      <button
+                        class="text-button"
+                        type="button"
+                        data-action="edit-spot"
+                        data-spot-id="${spot.id}"
+                      >
+                        Edit spot
+                      </button>
                       <button
                         class="text-button danger-button"
                         type="button"
@@ -1529,16 +1714,19 @@ async function deletePlace(placeId) {
 
   if (!confirmed) return;
 
-  const imageUrls = collectR2ImageUrlsFromSpots(relatedSpots);
+  const imageUrls = [
+    ...collectR2ImageUrlsFromPlace(place),
+    ...collectR2ImageUrlsFromSpots(relatedSpots),
+  ];
 
   const nextData = {
     places: data.places.filter((item) => item.id !== placeId),
     spots: data.spots.filter((spot) => spot.placeId !== placeId),
   };
 
-  await deleteUploadedImages(imageUrls);
   await persistData(nextData);
-  state.adminFeedback = `Deleted place: ${place.name}`;
+  const cleanupMessage = await cleanupUploadedImages(imageUrls);
+  state.adminFeedback = `Deleted place: ${place.name}${cleanupMessage ? ` (${cleanupMessage})` : ""}`;
   renderAdmin();
 }
 
@@ -1557,9 +1745,23 @@ async function deleteSpot(spotId) {
     spots: data.spots.filter((item) => item.id !== spotId),
   };
 
-  await deleteUploadedImages(imageUrls);
   await persistData(nextData);
-  state.adminFeedback = `Deleted spot: ${spot.name}`;
+  const cleanupMessage = await cleanupUploadedImages(imageUrls);
+  state.adminFeedback = `Deleted spot: ${spot.name}${cleanupMessage ? ` (${cleanupMessage})` : ""}`;
+  renderAdmin();
+}
+
+function startEditPlace(placeId) {
+  state.editingPlaceId = placeId;
+  state.editingSpotId = null;
+  state.adminTab = "place";
+  renderAdmin();
+}
+
+function startEditSpot(spotId) {
+  state.editingSpotId = spotId;
+  state.editingPlaceId = null;
+  state.adminTab = "spot";
   renderAdmin();
 }
 
@@ -1595,6 +1797,8 @@ document.addEventListener("click", async (event) => {
   if (action === "show-admin") routeTo("admin");
   if (action === "open-place") routeTo("place", place);
   if (action === "reset-data" && isAdminAuthenticated()) resetData();
+  if (action === "edit-place" && isAdminAuthenticated() && placeId) startEditPlace(placeId);
+  if (action === "edit-spot" && isAdminAuthenticated() && spotId) startEditSpot(spotId);
   if (action === "delete-place" && isAdminAuthenticated() && placeId) {
     try {
       await deletePlace(placeId);

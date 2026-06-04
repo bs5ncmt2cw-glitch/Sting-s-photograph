@@ -320,6 +320,10 @@ textarea {
   margin-bottom: 20px;
 }
 
+.compact-header {
+  margin-bottom: 8px;
+}
+
 .card-grid,
 .spot-preview-grid,
 .overview-grid,
