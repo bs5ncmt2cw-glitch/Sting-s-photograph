@@ -1,4 +1,5 @@
 const STORAGE_KEY = "travel-photo-spots-data-v1";
+const SHARED_CONTENT_SYNC_INTERVAL_MS = 30000;
 const NON_USER_PLACE_IDS = new Set([
   "tokyo-tower",
   "louvre-museum",
@@ -501,12 +502,27 @@ const state = {
   adminTab: "place",
   editingPlaceId: null,
   editingSpotId: null,
+  sharedSyncTimerId: null,
 };
 
 const app = document.getElementById("app");
 
 function cloneSeedData() {
   return JSON.parse(JSON.stringify(seedData));
+}
+
+function isLocalOnlyMode() {
+  const hostname = window.location.hostname;
+  return (
+    window.location.protocol === "file:" ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1"
+  );
+}
+
+function cacheSharedDataLocally(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function getLocalData() {
@@ -606,7 +622,7 @@ function isLocalFileUrl(value) {
 
 function saveData(data) {
   state.data = mergeWithSeedData(data);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  cacheSharedDataLocally(data);
 }
 
 function setAdminFeedback(message) {
@@ -665,10 +681,22 @@ async function refreshContentData() {
     state.contentApiAvailable = true;
     state.sharedContentInitialized = Boolean(payload.initialized);
     state.data = mergeWithSeedData(payload.data);
+    cacheSharedDataLocally(state.data);
     return state.data;
-  } catch {
+  } catch (error) {
     state.contentApiAvailable = false;
     state.sharedContentInitialized = false;
+
+    if (isLocalOnlyMode()) {
+      state.data = mergeWithSeedData(getLocalData());
+      return state.data;
+    }
+
+    if (state.data) {
+      return state.data;
+    }
+
+    state.adminMessage = error?.message || "Shared content is temporarily unavailable.";
     state.data = mergeWithSeedData(getLocalData());
     return state.data;
   }
@@ -702,7 +730,11 @@ async function persistData(data) {
     }
 
     state.sharedContentInitialized = true;
+    cacheSharedDataLocally(merged);
   } else {
+    if (!isLocalOnlyMode()) {
+      throw new Error("Shared content is unavailable. Reload the site and try again.");
+    }
     saveData(merged);
   }
 
@@ -891,6 +923,9 @@ async function resolveUploadedImage(fileInput, fallbackUrl) {
       const uploaded = await uploadImageFile(file, "place");
       return uploaded.imageUrl;
     }
+    if (!isLocalOnlyMode()) {
+      throw new Error("Image upload is temporarily unavailable. Reload the site and try again.");
+    }
     return fileToDataUrl(file);
   }
 
@@ -915,6 +950,10 @@ async function buildSpotPhotos(fileInput, fallbackUrl, name, captionPrefix) {
           : `${name} photo ${index + 1}`,
         isCover: index === 0,
       }));
+    }
+
+    if (!isLocalOnlyMode()) {
+      throw new Error("Image upload is temporarily unavailable. Reload the site and try again.");
     }
 
     const images = await Promise.all(
@@ -943,6 +982,52 @@ async function buildSpotPhotos(fileInput, fallbackUrl, name, captionPrefix) {
   }
 
   return [];
+}
+
+async function syncSharedContentIfNeeded() {
+  if (isLocalOnlyMode() || state.route === "admin" || state.route === "admin-login") {
+    return;
+  }
+
+  const previousData = JSON.stringify(state.data);
+  await refreshContentData();
+  const nextData = JSON.stringify(state.data);
+
+  if (previousData === nextData) {
+    return;
+  }
+
+  if (state.route === "place" && state.placeId) {
+    renderPlaceDetail(state.placeId);
+    return;
+  }
+
+  if (state.route === "places") {
+    renderPlaces();
+    return;
+  }
+
+  renderHome();
+}
+
+function startSharedContentSync() {
+  if (state.sharedSyncTimerId || isLocalOnlyMode()) {
+    return;
+  }
+
+  window.addEventListener("focus", () => {
+    syncSharedContentIfNeeded().catch(() => {});
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      syncSharedContentIfNeeded().catch(() => {});
+    }
+  });
+
+  state.sharedSyncTimerId = window.setInterval(() => {
+    syncSharedContentIfNeeded().catch(() => {});
+  }, SHARED_CONTENT_SYNC_INTERVAL_MS);
 }
 
 function renderUploadPreview(containerId, entries) {
@@ -1441,10 +1526,16 @@ function bindAdminForms() {
       ? data.places.find((item) => item.id === state.editingPlaceId)
       : null;
     const id = existingPlace ? existingPlace.id : ensureUniqueId(data.places, slugify(name));
-    const coverImageUrl = await resolveUploadedImage(
-      placeCoverFileInput,
-      formData.get("coverImageUrl").toString()
-    );
+    let coverImageUrl = "";
+    try {
+      coverImageUrl = await resolveUploadedImage(
+        placeCoverFileInput,
+        formData.get("coverImageUrl").toString()
+      );
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
 
     const finalCoverImageUrl = coverImageUrl || existingPlace?.coverImageUrl || "";
 
@@ -1507,12 +1598,18 @@ function bindAdminForms() {
     const existingSpot = state.editingSpotId
       ? data.spots.find((item) => item.id === state.editingSpotId)
       : null;
-    const photos = await buildSpotPhotos(
-      spotPhotoFileInput,
-      formData.get("coverImageUrl").toString(),
-      name,
-      formData.get("photoCaption").toString().trim()
-    );
+    let photos = [];
+    try {
+      photos = await buildSpotPhotos(
+        spotPhotoFileInput,
+        formData.get("coverImageUrl").toString(),
+        name,
+        formData.get("photoCaption").toString().trim()
+      );
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
 
     const finalPhotos = photos.length ? photos : existingSpot?.photos || [];
 
@@ -1827,6 +1924,7 @@ document.addEventListener("click", async (event) => {
 async function initApp() {
   await refreshAdminSession();
   await refreshContentData();
+  startSharedContentSync();
   renderHome();
 }
 

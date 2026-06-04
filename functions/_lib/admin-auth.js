@@ -40,7 +40,8 @@ export function jsonResponse(payload, status = 200, headers = {}) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      Pragma: "no-cache",
       "Content-Type": "application/json; charset=utf-8",
       ...headers,
     },
