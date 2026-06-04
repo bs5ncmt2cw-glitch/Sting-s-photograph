@@ -639,6 +639,19 @@ textarea {
   color: var(--accent-strong);
 }
 
+.danger-button {
+  color: #a33030;
+}
+
+.danger-button:hover {
+  color: #861f1f;
+  background: rgba(163, 48, 48, 0.08);
+}
+
+.admin-danger-actions {
+  margin-top: 10px;
+}
+
 @media (max-width: 980px) {
   .hero,
   .spot-card,

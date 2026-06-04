@@ -1424,6 +1424,16 @@ function renderAdminList() {
             </div>
             <h3>${place.name}</h3>
             <p>${place.description}</p>
+            <div class="inline-actions admin-danger-actions">
+              <button
+                class="text-button danger-button"
+                type="button"
+                data-action="delete-place"
+                data-place-id="${place.id}"
+              >
+                Delete place
+              </button>
+            </div>
             <div class="admin-spot-list">
               ${spots
                 .map(
@@ -1433,6 +1443,14 @@ function renderAdminList() {
                     <p>${spot.shortDescription}</p>
                     <div class="inline-actions">
                       <a href="${spot.googleMapsUrl}" target="_blank" rel="noreferrer">Open map</a>
+                      <button
+                        class="text-button danger-button"
+                        type="button"
+                        data-action="delete-spot"
+                        data-spot-id="${spot.id}"
+                      >
+                        Delete spot
+                      </button>
                     </div>
                   </div>
                 `
@@ -1461,6 +1479,46 @@ function parseMaybeNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+async function deletePlace(placeId) {
+  const data = getData();
+  const place = data.places.find((item) => item.id === placeId);
+  if (!place) return;
+
+  const relatedSpots = data.spots.filter((spot) => spot.placeId === placeId);
+  const confirmed = window.confirm(
+    `Delete "${place.name}" and ${relatedSpots.length} related spot${relatedSpots.length === 1 ? "" : "s"}?`
+  );
+
+  if (!confirmed) return;
+
+  const nextData = {
+    places: data.places.filter((item) => item.id !== placeId),
+    spots: data.spots.filter((spot) => spot.placeId !== placeId),
+  };
+
+  await persistData(nextData);
+  state.adminFeedback = `Deleted place: ${place.name}`;
+  renderAdmin();
+}
+
+async function deleteSpot(spotId) {
+  const data = getData();
+  const spot = data.spots.find((item) => item.id === spotId);
+  if (!spot) return;
+
+  const confirmed = window.confirm(`Delete spot "${spot.name}"?`);
+  if (!confirmed) return;
+
+  const nextData = {
+    places: data.places,
+    spots: data.spots.filter((item) => item.id !== spotId),
+  };
+
+  await persistData(nextData);
+  state.adminFeedback = `Deleted spot: ${spot.name}`;
+  renderAdmin();
+}
+
 function resetData() {
   const fresh = cloneSeedData();
   state.data = fresh;
@@ -1486,13 +1544,27 @@ document.addEventListener("click", async (event) => {
   const target = event.target.closest("[data-action]");
   if (!target) return;
 
-  const { action, place } = target.dataset;
+  const { action, place, placeId, spotId } = target.dataset;
 
   if (action === "go-home") routeTo("home");
   if (action === "show-places") routeTo("places");
   if (action === "show-admin") routeTo("admin");
   if (action === "open-place") routeTo("place", place);
   if (action === "reset-data" && isAdminAuthenticated()) resetData();
+  if (action === "delete-place" && isAdminAuthenticated() && placeId) {
+    try {
+      await deletePlace(placeId);
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+  if (action === "delete-spot" && isAdminAuthenticated() && spotId) {
+    try {
+      await deleteSpot(spotId);
+    } catch (error) {
+      alert(error.message);
+    }
+  }
   if (action === "admin-auth") {
     if (isAdminAuthenticated()) {
       await logoutAdmin();
