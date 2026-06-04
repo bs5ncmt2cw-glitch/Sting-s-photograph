@@ -26,6 +26,11 @@ export async function loadImageFromBucket(env, key) {
   return bucket.get(key);
 }
 
+export async function deleteImageFromBucket(env, key) {
+  const bucket = getBucket(env);
+  await bucket.delete(key);
+}
+
 function getBucket(env) {
   if (!env.IMAGES_BUCKET) {
     throw new Error("Missing IMAGES_BUCKET R2 binding.");
@@ -52,4 +57,10 @@ function getFileExtension(file) {
   if (file?.type === "image/png") return ".png";
   if (file?.type === "image/webp") return ".webp";
   return "";
+}
+
+export function imageUrlToKey(imageUrl) {
+  if (typeof imageUrl !== "string") return null;
+  if (!imageUrl.startsWith(IMAGE_URL_PREFIX)) return null;
+  return imageUrl.slice(IMAGE_URL_PREFIX.length) || null;
 }

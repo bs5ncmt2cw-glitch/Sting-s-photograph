@@ -104,6 +104,7 @@ The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-we
 - Admin portal with server-verified login
 - Shared content API backed by Cloudflare D1 when available
 - Direct image upload for place covers and spot photos
+- Admin delete actions for places and spots, with R2 cleanup for app-hosted uploaded images
 - JSON export and import for backup and migration
 
 ## Important limitations
@@ -111,3 +112,4 @@ The [_routes.json](/Users/yamanm5/Desktop/Codex/2026-05-10/travel-photo-spots-we
 - Local development mode still falls back to browser local storage for content because the local Node server does not implement the D1 content APIs.
 - Cloudflare shared content currently uses a single JSON document in D1. This is practical for early use, but larger libraries should move image blobs to R2 and normalize records later.
 - On Cloudflare, uploaded images are now stored in R2 and referenced by URL from shared content. Local `localhost` mode still falls back to browser data URLs because the local Node server does not implement the R2 upload APIs.
+- Deleting a place or spot now removes related app-hosted R2 images when their URLs use the `/api/images/` route. Seed images and third-party image URLs are left untouched.

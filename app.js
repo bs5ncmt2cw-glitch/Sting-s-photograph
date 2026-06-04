@@ -733,6 +733,44 @@ async function uploadImageFile(file, category) {
   return response.json();
 }
 
+function collectR2ImageUrlsFromSpots(spots) {
+  return [
+    ...new Set(
+      spots
+        .flatMap((spot) => Array.isArray(spot.photos) ? spot.photos : [])
+        .map((photo) => photo?.imageUrl)
+        .filter((imageUrl) => typeof imageUrl === "string" && imageUrl.startsWith("/api/images/"))
+    ),
+  ];
+}
+
+async function deleteUploadedImages(imageUrls) {
+  const urls = [...new Set((imageUrls || []).filter(Boolean))];
+  if (!urls.length || !state.contentApiAvailable) return;
+
+  const response = await fetch("/api/admin/delete-image", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ imageUrls: urls }),
+  });
+
+  if (!response.ok) {
+    let message = "Unable to delete uploaded images.";
+    try {
+      const payload = await response.json();
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      // Keep fallback message.
+    }
+    throw new Error(message);
+  }
+}
+
 async function loginAdmin(passcode) {
   const response = await fetch("/api/admin/login", {
     method: "POST",
@@ -1491,11 +1529,14 @@ async function deletePlace(placeId) {
 
   if (!confirmed) return;
 
+  const imageUrls = collectR2ImageUrlsFromSpots(relatedSpots);
+
   const nextData = {
     places: data.places.filter((item) => item.id !== placeId),
     spots: data.spots.filter((spot) => spot.placeId !== placeId),
   };
 
+  await deleteUploadedImages(imageUrls);
   await persistData(nextData);
   state.adminFeedback = `Deleted place: ${place.name}`;
   renderAdmin();
@@ -1509,11 +1550,14 @@ async function deleteSpot(spotId) {
   const confirmed = window.confirm(`Delete spot "${spot.name}"?`);
   if (!confirmed) return;
 
+  const imageUrls = collectR2ImageUrlsFromSpots([spot]);
+
   const nextData = {
     places: data.places,
     spots: data.spots.filter((item) => item.id !== spotId),
   };
 
+  await deleteUploadedImages(imageUrls);
   await persistData(nextData);
   state.adminFeedback = `Deleted spot: ${spot.name}`;
   renderAdmin();
